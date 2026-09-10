@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8'>
+<meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>Upwork Job Feed Alert Bot — live demo</title>
+<meta property='og:url' content='https://amos-mig.github.io/upwork-job-feed-alert-bot-demo/'>
+<style>
+*{box-sizing:border-box;margin:0}
+body{background:#0b0d12;color:#e8eaf0;font:15px/1.55 -apple-system,'Segoe UI',Roboto,sans-serif}
+a{color:#10b981}
+.wrap{max-width:1060px;margin:0 auto;padding:0 18px}
+.banner{background:#10b981;color:#08110d;font-size:13px;font-weight:600;text-align:center;padding:8px 14px}
+h1{font-size:clamp(24px,4vw,34px);margin:26px 0 6px}
+h1 em{color:#10b981;font-style:normal}
+.sub{color:#9aa3b2;max-width:680px;margin-bottom:6px}
+.panel{background:#14171f;border:1px solid #262b36;border-radius:10px;padding:16px}
+.console{display:grid;grid-template-columns:290px 1fr;gap:14px;margin:20px 0 26px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#9aa3b2;margin-bottom:10px}
+.chip{border:1px solid #262b36;background:#0b0d12;color:#9aa3b2;border-radius:99px;padding:3px 11px;font-size:12px;cursor:pointer;margin:0 5px 6px 0;font-family:inherit}
+.chip.on{border-color:#10b981;color:#10b981}
+.row{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin:12px 0 4px;color:#9aa3b2}
+input[type=range]{width:100%;accent-color:#10b981}
+input[type=text]{background:#0b0d12;border:1px solid #262b36;color:#e8eaf0;border-radius:6px;padding:6px 9px;font-size:13px;width:100%;font-family:inherit;margin-top:4px}
+.btn{background:#10b981;color:#08110d;border:0;border-radius:7px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:13px;font-family:inherit}
+.btn.ghost{background:transparent;color:#9aa3b2;border:1px solid #262b36}
+.stats{display:flex;gap:8px;margin:14px 0 12px}
+.stat{flex:1;background:#0b0d12;border:1px solid #262b36;border-radius:8px;padding:7px 4px;text-align:center}
+.stat b{display:block;font-size:17px}
+.stat span{font-size:10px;color:#9aa3b2;text-transform:uppercase;letter-spacing:.06em}
+#feedhead{display:flex;justify-content:space-between;gap:10px;font:11.5px ui-monospace,Consolas,monospace;color:#9aa3b2;border-bottom:1px solid #262b36;padding-bottom:9px;flex-wrap:wrap}
+.live{color:#10b981}.live::before{content:'● ';animation:bl 1.4s infinite}
+@keyframes bl{50%{opacity:.25}}
+#feed{list-style:none;max-height:330px;overflow-y:auto;margin-top:4px}
+#feed li{padding:9px 4px;border-bottom:1px solid #1a1f29;animation:in .35s}
+@keyframes in{from{opacity:0;transform:translateY(-6px)}}
+#feed b{font-size:13.5px;font-weight:600;display:block}
+#feed small{color:#9aa3b2;font-size:11.5px}
+.badge{float:right;font-size:10.5px;padding:2px 9px;border-radius:99px;font-weight:700;margin-left:8px}
+#feed li.hit{border-left:2px solid #10b981}
+.badge.hit{background:rgba(16,185,129,.12);color:#10b981;border:1px solid rgba(16,185,129,.5)}
+.badge.skip{color:#8b93a3;border:1px solid #262b36;font-weight:500}
+.feedwrap{position:relative}
+#toast{position:absolute;top:46px;right:14px;background:#10b981;color:#08110d;font-size:12px;font-weight:700;padding:7px 13px;border-radius:8px;opacity:0;transition:.3s;pointer-events:none;max-width:78%;z-index:2}
+#toast.show{opacity:1}
+#payload{margin-top:12px;background:#0b0d12;border:1px solid #262b36;border-radius:8px;padding:10px;font:11.5px/1.5 ui-monospace,Consolas,monospace;color:#9aa3b2;overflow-x:auto;white-space:pre}
+.sim{font-size:11px;color:#8b93a3;margin-top:9px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:12px;margin-bottom:28px}
+.card h3{font-size:14px;margin-bottom:6px}
+.card p{color:#9aa3b2;font-size:13px}
+.card.locked{border-style:dashed}
+.card.locked h3{color:#9aa3b2}
+.ship{margin-bottom:30px}
+pre{background:#0b0d12;border:1px solid #262b36;border-radius:8px;padding:14px;overflow-x:auto;font:12px/1.6 ui-monospace,Consolas,monospace;color:#c8cede;margin:10px 0 18px}
+.cm{color:#5b6474}
+.cta{display:inline-block;background:#10b981;color:#08110d;font-weight:700;padding:13px 24px;border-radius:9px;text-decoration:none;font-size:15px}
+.note{color:#9aa3b2;font-size:12px;margin-top:9px}
+footer{border-top:1px solid #262b36;padding:18px;color:#9aa3b2;font-size:13px;display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center}
+footer b{color:#e8eaf0}
+@media(max-width:760px){.console{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class='banner'>Live demo — filters run locally on a simulated feed. The full product watches real Upwork feeds 24/7 ↓</div>
+<div class='wrap'>
+<header>
+<h1 id='h1t'>Upwork Job Feed Alert Bot</h1>
+<p class='sub'>On Upwork, the first 10 proposals shape the shortlist. This bot watches Upwork feeds for jobs matching your skills and pings you in seconds — without living in the browser. Try the exact matcher below.</p>
+</header>
+<section class='console'>
+<aside class='panel'>
+<h2>Your filters</h2>
+<div id='chips'></div>
+<form id='addk'><input type='text' id='newk' placeholder='add keyword…' maxlength='14' autocomplete='off'></form>
+<div class='row'><span>Min budget</span><b id='bv'>$25</b></div>
+<input type='range' id='brange' min='0' max='300' step='5' value='25'>
+<div class='row'><label style='cursor:pointer'><input type='checkbox' id='ver' checked> verified clients only</label></div>
+<div class='stats'>
+<div class='stat'><b id='ss'>0</b><span>scanned</span></div>
+<div class='stat'><b id='sm' style='color:#10b981'>0</b><span>alerted</span></div>
+<div class='stat'><b id='sf'>0</b><span>filtered</span></div>
+</div>
+<div style='display:flex;gap:8px'>
+<button class='btn' id='go' style='flex:1'>Scan now</button>
+<button class='btn ghost' id='pause'>Pause</button>
+</div>
+</aside>
+<div class='panel feedwrap'>
+<div id='feedhead'><span>upwork.com/rss/search?q=python+bot</span><span class='live' id='pstat'>polling every 2.6s</span></div>
+<ul id='feed'></ul>
+<div id='toast'></div>
+<div id='payload'>// matched jobs will show their delivery payload here</div>
+<p class='sim'>Simulated feed — the real bot polls actual Upwork RSS server-side with jittered, respectful intervals.</p>
+</div>
+</section>
+<section class='cards'>
+<div class='panel card'><h3>Keyword / skill filters</h3><p>The same matcher running live above — toggle chips or add terms and every new job is scored instantly.</p></div>
+<div class='panel card'><h3>Budget &amp; client pre-filters</h3><p>Skim off lowball budgets and unverified clients before anything ever reaches your inbox.</p></div>
+<div class='panel card'><h3>Single-file Python</h3><p>One script, jittered 10–120s polling, quiet logs. Runs for months on a free-tier VPS or the cheapest droplet.</p></div>
+<div class='panel card locked'><h3>🔒 Webhook &amp; email delivery</h3><p>POST to Zapier / n8n / your own endpoint, or get instant email plus a daily digest — in the full bot.</p></div>
+<div class='panel card locked'><h3>🔒 Multi-feed watchlists</h3><p>Several saved searches, each routed to its own Slack or Telegram channel — in the full kit.</p></div>
+</section>
+<section class='ship panel'>
+<h2>Under the hood — a partial look</h2>
+<pre><span class='cm'># alert_bot.py — excerpt (config, delivery, retries and daemon setup live in the full file)</span>
+def job_matches(job, cfg):
+    hay = (job['title'] + ' ' + job['skills']).lower()
+    if not any(k in hay for k in cfg.keywords):
+        return False, 'no keyword match'
+    if job['budget'] &lt; cfg.min_budget:
+        return False, 'budget too low'
+    if cfg.verified_only and not job['client_verified']:
+        return False, 'client unverified'
+    return True, None
+
+<span class='cm'># main loop — jittered interval, never hammers Upwork</span>
+for job in parse_feed(fetch(FEED_URL)):
+    ok, why = job_matches(job, cfg)
+    if ok:
+        deliver(cfg, job)   <span class='cm'># full version: webhook / email / Slack</span></pre>
+<a class='cta' href='https://amosmign.gumroad.com/l/upwork-job-feed-alert-bot'>Get the full bot · 29</a>
+<p class='note'>Instant download · single <code>alert_bot.py</code> + config &amp; VPS setup guide · lifetime updates.</p>
+</section>
+</div>
+<footer><b>Upwork Job Feed Alert Bot</b><span>·</span><a href='https://kits.amosmignery.dev'>kits.amosmignery.dev</a><span>·</span><a href='https://github.com/Amos-Mig/upwork-job-feed-alert-bot-demo'>GitHub</a><span>·</span><a href='https://amosmign.gumroad.com/l/upwork-job-feed-alert-bot'>Get the bot</a><span>·</span><span>demo responses are simulated</span></footer>
+<script>
+var POOL=[
+{t:'Telegram alert bot in Python',k:'python, telethon, api',b:300,v:1,r:4.9},
+{t:'Excel data entry cleanup — 400 rows',k:'excel, data entry',b:25,v:1,r:4.2},
+{t:'Scraper for real-estate listings → CSV',k:'python, scraper, beautifulsoup',b:500,v:1,r:4.8},
+{t:'Python bot to auto-post classified ads',k:'python, selenium',b:200,v:0,r:3.4},
+{t:'Logo redesign for a coffee shop',k:'illustrator, branding',b:150,v:1,r:4.6},
+{t:'Discord moderation bot with anti-spam',k:'discord.js, node',b:60,v:1,r:4.7},
+{t:'Simple Python script to rename 5,000 files',k:'python, os, scripting',b:15,v:1,r:5},
+{t:'Twitter/X monitoring bot for keyword mentions',k:'python, tweepy',b:250,v:1,r:4.5},
+{t:'WordPress landing page + contact form',k:'wordpress, elementor',b:80,v:1,r:4.3},
+{t:'Automation bot for lead scraping + enrichment',k:'python, scraping, api',b:450,v:1,r:4.9},
+{t:'Airbnb price tracker script',k:'python, requests',b:90,v:1,r:4.4},
+{t:'Instagram auto-comment bot',k:'bot, instagrapi',b:30,v:0,r:2.8}];
+var keys={python:1,bot:1,scraper:1},minB=25,ver=1,run=1,i=0,st={s:0,m:0,f:0};
+function el(id){return document.getElementById(id)}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+function match(j){var hay=(j.t+' '+j.k).toLowerCase(),kw=null,k;for(k in keys){if(keys[k]&&hay.indexOf(k)>-1){kw=k;break}}if(!kw)return{ok:0,why:'no keyword'};if(j.b<minB)return{ok:0,why:'budget below $'+minB};if(ver&&!j.v)return{ok:0,why:'unverified client'};return{ok:1,kw:kw}}
+function toast(m){var t=el('toast');t.textContent=m;t.classList.add('show');clearTimeout(t.h);t.h=setTimeout(function(){t.classList.remove('show')},2400)}
+function meta(j){return esc(j.k)+' · $'+j.b+' · '+(j.v?'verified':'unverified')+' client · ★'+j.r.toFixed(1)}
+function tick(){var j=POOL[i++%POOL.length],m=match(j),li=document.createElement('li');st.s++;
+if(m.ok){st.m++;li.className='hit';li.innerHTML='<span class="badge hit">ALERT · '+m.kw+'</span><b>'+esc(j.t)+'</b><small>'+meta(j)+'</small>';
+el('payload').textContent=JSON.stringify({event:'job.matched',keyword:m.kw,title:j.t,budget:j.b,url:'https://www.upwork.com/jobs/~021a8f'+(1000+i%9000)},null,1);
+toast('ALERT — '+j.t+' ($'+j.b+')');}
+else{st.f++;li.innerHTML='<span class="badge skip">SKIPPED · '+m.why+'</span><b>'+esc(j.t)+'</b><small>'+meta(j)+'</small>';}
+var f=el('feed');f.insertBefore(li,f.firstChild);while(f.children.length>9)f.removeChild(f.lastChild);
+el('ss').textContent=st.s;el('sm').textContent=st.m;el('sf').textContent=st.f;}
+function chips(){var c=el('chips');c.innerHTML='';for(var k in keys){(function(kk){var b=document.createElement('button');b.type='button';b.className='chip'+(keys[kk]?' on':'');b.textContent=kk;b.onclick=function(){keys[kk]=keys[kk]?0:1;chips()};c.appendChild(b)})(k)}}
+el('go').onclick=tick;
+el('pause').onclick=function(){run=!run;this.textContent=run?'Pause':'Resume';var p=el('pstat');p.className=run?'live':'';p.textContent=run?'polling every 2.6s':'paused'};
+el('brange').oninput=function(){minB=+this.value;el('bv').textContent='$'+minB};
+el('ver').onchange=function(){ver=this.checked?1:0};
+el('addk').onsubmit=function(e){e.preventDefault();var v=el('newk').value.trim().toLowerCase();if(v&&v.length>1&&!keys[v])keys[v]=1;el('newk').value='';chips()};
+chips();tick();setInterval(function(){if(run)tick()},2600);
+el('h1t').innerHTML=el('h1t').textContent.replace('Alert Bot','<em>Alert Bot</em>');
+</script>
+</body>
+</html>
